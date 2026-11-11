@@ -48,16 +48,10 @@ Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas,
 ![Courbe ROC du jeu de test](results/roc_curve.png)
 
 ## Conclusion
-- Discrimination limitée.** Avec une AUC de 0,69, le modèle trie les participants mieux que le hasard, mais pas assez pour guider une décision individuelle.
-- Surapprentissage. L'AUC atteint **0,94 sur les participants d'entraînement** contre 0,69 sur le test. Le modèle a en partie mémorisé les particularités de l'échantillon au lieu d'apprendre des règles généralisables. C'est pourquoi seules les lignes `test` du fichier de prédictions constituent une évaluation honnête.
+- Discrimination limitée.Avec une AUC de 0,69, le modèle trie les participants mieux que le hasard, mais pas assez pour guider une décision individuelle.
+- Surapprentissage. L'AUC atteint **0,94 sur les participants d'entraînement** contre 0,69 sur le test. Le modèle a en partie mémorisé les particularités de l'échantillon au lieu d'apprendre des règles généralisables. 
 - Faible effectif Avec 200 participants en test, l'incertitude est large (IC 95 % de 0,60 à 0,77).
 - Une légère surestimation du risque. Le risque moyen prédit (0,38) dépasse un peu la fréquence observée (0,36). La calibration n'a toutefois pas été analysée en détail.
-
-## Limites
-- Les données sont simulées : les associations retrouvées reflètent la formule de simulation, pas la biologie.
-- Un seul découpage entraînement / test, sur un échantillon de taille modeste.
-- Aucune validation externe sur une cohorte indépendante.
-- Une prédiction n'est pas une causalité : un bon score de risque ne prouve pas qu'un facteur cause la maladie.
 
 ## Comment refaire la simulation
 1. Ouvrir `analysis.R` dans RStudio.
