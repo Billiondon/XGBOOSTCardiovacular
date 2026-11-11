@@ -18,8 +18,8 @@ Avant d'appliquer ces méthodes à de vraies cohortes, il est précieux de s'ent
 | Famille | Variables |
 |---|---|
 | Démographie | âge, sexe |
-| Anthropométrie et hémodynamique | IMC, pression artérielle systolique et diastolique |
-| Bilan lipidique | LDL-cholestérol, HDL-cholestérol, triglycérides |
+| Corpulence  et hémodynamique | IMC, pression artérielle systolique et diastolique |
+| EAL | LDL-cholestérol, HDL-cholestérol, triglycérides |
 | Métabolisme glucidique | HbA1c, diabète |
 | Mode de vie et antécédents | statut tabagique, paquets-années, antécédents familiaux cardiovasculaires |
 | Inflammation et fonction rénale | CRP ultrasensible, DFG estimé |
