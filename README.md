@@ -2,8 +2,11 @@
 Ce projet construit, à partir de 800 participants fictifs, un modèle de ML (XGBoost) qui estime la probabilité d'être atteint d'athérosclérose. 
 
 ## Pourquoi ce projet ?
-En consultation médicale, on cherche souvent à estimer le risque d'un patient à partir d'informations simples.
-Avant d'appliquer ces méthodes à de vraies cohortes, il est précieux de s'entraîner sur des données simulées.
+En consultation médicale, on cherche souvent à définir la stratégie thérapeutique selon plusieurs imperatifs dont l'évolution du patient dans le temps.
+Estimer le risque d'un patient de développer une maladie permet donc d'adopter une attitude de prévention plus agressive et de personnaliser le soin .
+Ajd, on estime ce risque cardiovasculaire globale par approche statistique en se basant sur les résultats d'essai clinique de gd envergure.
+On peut, par ML, estimer le risque individuel d'un patient en combinant un grand nombre de variables cliniques, biologiques et comportementales.
+Avant d'appliquer ces méthodes à de vraies base de données, il est précieux de s'entraîner sur des données simulées.
 
 ## La démarche suivie
 - Creation d'une cohorte simulée
@@ -30,8 +33,6 @@ Avant d'appliquer ces méthodes à de vraies cohortes, il est précieux de s'ent
 
 Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas, HDL, paquets-années), comme dans les données de vie réelle. XGBoost les gère directement.
 
-
-
 ## Résultats sur le jeu de test (n = 200)
 
 | Indicateur | Valeur | Ce que cela signifie |
@@ -47,7 +48,6 @@ Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas,
 
 ![Courbe ROC du jeu de test](results/roc_curve.png)
 
-
 ## Conclusion
 - Discrimination limitée.** Avec une AUC de 0,69, le modèle trie les participants mieux que le hasard, mais pas assez pour guider une décision individuelle.
 - Surapprentissage. L'AUC atteint **0,94 sur les participants d'entraînement** contre 0,69 sur le test. Le modèle a en partie mémorisé les particularités de l'échantillon au lieu d'apprendre des règles généralisables. C'est pourquoi seules les lignes `test` du fichier de prédictions constituent une évaluation honnête.
@@ -59,7 +59,6 @@ Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas,
 - Un seul découpage entraînement / test, sur un échantillon de taille modeste.
 - Aucune validation externe sur une cohorte indépendante.
 - Une prédiction n'est pas une causalité : un bon score de risque ne prouve pas qu'un facteur cause la maladie.
-
 
 ## Comment refaire la simulation
 1. Ouvrir `analysis.R` dans RStudio.
