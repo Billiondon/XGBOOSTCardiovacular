@@ -62,10 +62,9 @@ Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas,
 
 
 ## Comment refaire la simulation
-1. Installer **R** et **RStudio**.
-2. Ouvrir `analysis.R` dans RStudio.
-3. Choisir le dossier du script comme dossier de travail : *Session > Set Working Directory > To Source File Location*.
-4. Cliquer sur **Source**. Les packages manquants (`xgboost`, `pROC`, `ggplot2`) s'installent automatiquement.
+1. Ouvrir `analysis.R` dans RStudio.
+2. Aller à Session > Set Working Directory > To Source File Location.
+3. Cliquer sur Source
 
 Le script régénère les données, entraîne le modèle et écrit les résultats dans le dossier `results/`.
 
