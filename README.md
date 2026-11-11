@@ -1,27 +1,21 @@
-# 🫀 Prédire la présence d'athérosclérose avec XGBoost
+#  Prédire la présence d'athérosclérose avec XGBoost
+**Données entièrement simulées.** Aucun patient réel n'est concerné. Ce travail illustre une démarche méthodologique ; ses résultats n'ont **aucune valeur clinique** et ne doivent servir à aucune décision de soins.
 
-*Un projet d'apprentissage en R : de la table de participants à l'évaluation d'un modèle de risque.*
+Ce projet construit, à partir de 800 participants fictifs, un modèle d'apprentissage automatique (XGBoost) qui estime, pour chacun, la **probabilité d'être atteint d'athérosclérose**. 
+Dans un premier temps, le modèle apprend sur 600 participants, puis il est évalué sur 200 autres qu'il n'a jamais vus.
 
-> ⚠️ **Données entièrement simulées.** Aucun patient réel n'est concerné. Ce travail illustre une démarche méthodologique ; ses résultats n'ont **aucune valeur clinique** et ne doivent servir à aucune décision de soins.
-
----
-
-## En bref
-
-Ce projet construit, à partir de 800 participants fictifs, un modèle d'apprentissage automatique (XGBoost) qui estime, pour chacun, la **probabilité d'être atteint d'athérosclérose**. Le modèle apprend sur 600 participants, puis il est évalué sur 200 autres qu'il n'a jamais vus, comme on le ferait pour valider un score de risque avant de l'utiliser en consultation.
-
-**Ce qu'on retient :** la capacité du modèle à distinguer les sujets atteints des sujets indemnes est **modeste** (AUC 0,69), et il montre des **signes nets de surapprentissage**. C'est un résultat honnête, et c'est précisément ce que ce type de contrôle sert à révéler.
+Résultats: La capacité du modèle à distinguer les sujets atteints des sujets indemnes reste **modeste** (AUC 0,69), et il montre des **signes nets de surapprentissage**. 
 
 ---
 
 ## Pourquoi ce projet ?
 
-En médecine, on cherche souvent à estimer le risque d'un patient à partir d'informations simples : âge, tension, bilan lipidique, tabagisme, et de plus en plus des mesures issues d'objets connectés (activité, fréquence cardiaque, sommeil). Avant d'appliquer ces méthodes à de vraies cohortes, il est précieux de s'entraîner sur des données simulées : on maîtrise la démarche sans enjeu de confidentialité et sans risque d'interpréter à tort un résultat comme clinique.
+En consultation médicale, on cherche souvent à estimer le risque d'un patient à partir d'informations simples.
+Avant d'appliquer ces méthodes à de vraies cohortes, il est précieux de s'entraîner sur des données simulées.
 
 ---
 
 ## Les données
-
 800 participants, une ligne par participant, 22 variables explicatives et une variable à prédire.
 
 | Famille | Variables |
@@ -35,13 +29,13 @@ En médecine, on cherche souvent à estimer le risque d'un patient à partir d'i
 | Traitements | statine, antihypertenseur |
 | Mesures de type « objet connecté » | activité physique, fréquence cardiaque de repos, variabilité sinusale (RMSSD), nombre de pas, durée de sommeil |
 
-**Variable à prédire :** `atherosclerosis` (0 = absente, 1 = présente), par exemple une plaque athéromateuse carotidienne à l'échographie. Prévalence : 36 %.
+**Variable à prédire :** `atherosclerosis` (0 = absente, 1 = présente), par exemple une plaque athéromateuse carotidienne à l'échographie.
 
 Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas, HDL, paquets-années), comme dans les données de vie réelle. XGBoost les gère directement.
 
 ---
 
-## La démarche, pas à pas
+## La démarche suivie
 
 1. **Simulation des participants**, avec une formule de risque connue (graine fixée pour que tout soit reproductible).
 2. **Séparation entraînement / test** : 75 % / 25 %, en conservant la même proportion de cas dans les deux groupes (séparation stratifiée).
@@ -86,23 +80,9 @@ Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas,
 - Aucune validation externe sur une cohorte indépendante.
 - Une prédiction n'est pas une causalité : un bon score de risque ne prouve pas qu'un facteur cause la maladie.
 
-## Ce qui n'a pas été fait
-
-Analyse détaillée de la **calibration**, **explications SHAP** (contribution de chaque variable à la prédiction d'un participant), **comparaison avec une régression logistique** et réglage plus poussé des hyperparamètres. Ce sont les prolongements naturels de ce travail.
-
 ---
 
-## Petit glossaire
-
-- **Discrimination** : capacité du modèle à séparer les sujets atteints des sujets indemnes (mesurée par l'AUC).
-- **Calibration** : concordance entre le risque annoncé et la fréquence réellement observée (un risque annoncé de 30 % doit correspondre à environ 30 % de cas).
-- **Surapprentissage** : le modèle réussit très bien sur les données qui l'ont entraîné, mais déçoit sur de nouvelles données.
-- **Validation croisée** : technique qui réutilise plusieurs fois les données d'entraînement pour régler le modèle sans toucher au jeu de test.
-- **Faux négatif / faux positif** : sujet atteint non repéré / sujet indemne signalé à tort.
-
----
-
-## Reproduire l'analyse
+## Comment refaire la simulation
 
 1. Installer **R** et **RStudio**.
 2. Ouvrir `analysis.R` dans RStudio.
