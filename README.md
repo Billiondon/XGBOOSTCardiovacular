@@ -3,7 +3,7 @@ Ce projet construit, à partir de 800 participants fictifs, un modèle de ML (XG
 
 ## Pourquoi ce projet ?
 En consultation médicale, on cherche souvent à définir la stratégie thérapeutique selon plusieurs imperatifs dont l'évolution du patient dans le temps.
-Estimer le risque d'un patient de développer une maladie permet donc d'adopter une attitude de prévention plus agressive et de personnaliser le soin .
+En effet, Estimer le risque d'un patient de développer une maladie permet d'adopter une attitude de prévention plus ou moins agressive et de personnaliser le soin .
 Ajd, on estime ce risque cardiovasculaire globale par approche statistique en se basant sur les résultats d'essai clinique de gd envergure.
 On peut, par ML, estimer le risque individuel d'un patient en combinant un grand nombre de variables cliniques, biologiques et comportementales.
 Avant d'appliquer ces méthodes à de vraies base de données, il est précieux de s'entraîner sur des données simulées.
