@@ -1,20 +1,20 @@
-#  Prédire la présence d'athérosclérose avec XGBoost
+Prédire la présence d'athérosclérose avec XGBoost
 Ce projet construit, à partir de 800 participants fictifs, un modèle de ML (XGBoost) qui estime la probabilité d'être atteint d'athérosclérose. 
 
-## Pourquoi ce projet ?
+Pourquoi ce projet ?
 En consultation médicale, on cherche souvent à définir la stratégie thérapeutique selon plusieurs imperatifs dont l'évolution du patient dans le temps.
 Ajd, on estime ce risque cardiovasculaire globale par approche statistique en se basant sur les résultats d'essai clinique de gd envergure.
 On peut, par ML, estimer le risque individuel d'un patient en combinant un grand nombre de variables cliniques, biologiques et comportementales.
 Avant d'appliquer ces méthodes à de vraies base de données, il est précieux de s'entraîner sur des données simulées.
 
-## La démarche suivie
+La démarche suivie
 - Creation d'une cohorte simulée
 - Mise en place d'un groupe d'entrainement et d'un groupe de test
 - Définition du meilleur modele offrant un compromis en performance et risque d'overfitting
 - Entraînement du modèle final sur les données d'apprentissage, puis calcul pour chaque participant d'une probabilité individuelle d'athérosclérose comprise entre 0 et 1
 - Evaluatuion des performances
 
-## Les données
+Les données
 800 participants, une ligne par participant, 22 variables explicatives et une variable à prédire.
 
 | Famille | Variables |
@@ -32,7 +32,7 @@ Avant d'appliquer ces méthodes à de vraies base de données, il est précieux 
 
 Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas, HDL, paquets-années), comme dans les données de vie réelle. XGBoost les gère directement.
 
-## Résultats sur le jeu de test (n = 200)
+Résultats sur le jeu de test (n = 200)
 
 | Indicateur | Valeur | Ce que cela signifie |
 |---|---|---|
@@ -53,14 +53,14 @@ Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas,
 - Faible effectif Avec 200 participants en test, l'incertitude est large (IC 95 % de 0,60 à 0,77).
 - Une légère surestimation du risque. Le risque moyen prédit (0,38) dépasse un peu la fréquence observée (0,36). La calibration n'a toutefois pas été analysée en détail.
 
-## Comment refaire la simulation
+Comment refaire la simulation
 1. Ouvrir `analysis.R` dans RStudio.
 2. Aller à Session > Set Working Directory > To Source File Location.
 3. Cliquer sur Source
 
 Le script régénère les données, entraîne le modèle et écrit les résultats dans le dossier `results/`.
 
-## Contenu du dépôt
+Contenu du dépôt
 
 | Fichier | Rôle |
 |---|---|
