@@ -47,7 +47,7 @@ Résultats sur le jeu de test (n = 200)
 
 ![Courbe ROC du jeu de test](results/roc_curve.png)
 
-# Conclusion:
+Conclusion:
 - Discrimination limitée.Avec une AUC de 0,69, le modèle trie les participants mieux que le hasard, mais pas assez pour guider une décision individuelle.
 - Surapprentissage. L'AUC atteint **0,94 sur les participants d'entraînement** contre 0,69 sur le test. Le modèle a en partie mémorisé les particularités de l'échantillon au lieu d'apprendre des règles généralisables. 
 - Faible effectif Avec 200 participants en test, l'incertitude est large (IC 95 % de 0,60 à 0,77).
