@@ -1,10 +1,9 @@
 #  Prédire la présence d'athérosclérose avec XGBoost
-**Données entièrement simulées.** Aucun patient réel n'est concerné. Ce travail illustre une démarche méthodologique ; ses résultats n'ont **aucune valeur clinique** et ne doivent servir à aucune décision de soins.
 
-Ce projet construit, à partir de 800 participants fictifs, un modèle d'apprentissage automatique (XGBoost) qui estime, pour chacun, la **probabilité d'être atteint d'athérosclérose**. 
+Ce projet construit, à partir de 800 participants fictifs, un modèle d'apprentissage automatique (XGBoost) qui estime, pour chacun, la probabilité d'être atteint d'athérosclérose. 
 Dans un premier temps, le modèle apprend sur 600 participants, puis il est évalué sur 200 autres qu'il n'a jamais vus.
 
-Résultats: La capacité du modèle à distinguer les sujets atteints des sujets indemnes reste **modeste** (AUC 0,69), et il montre des **signes nets de surapprentissage**. 
+Résultats: La capacité du modèle à distinguer les sujets atteints des sujets indemnes reste modeste (AUC 0,69), et il montre des signes nets de surapprentissage. 
 
 ---
 
