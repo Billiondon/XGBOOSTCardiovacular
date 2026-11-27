@@ -1,3 +1,12 @@
+# Ce script déroule, étape par étape, la construction et l'évaluation d'un modèle de risque, comme on le ferait pour valider un score avant de l'utiliser en consultation :
+#
+#    1. simuler une cohorte de 800 participants ;
+#    2. séparer un groupe d'entraînement et un groupe de test ;
+#    3. régler le modèle par validation croisée ;
+#    4. calculer un risque individuel pour chaque participant ;
+#    5. évaluer le modèle sur des participants qu'il n'a jamais vus ;
+#    6. [AJOUT] le situer : plafond atteignable, régression logistique, calibration.
+#
 #  Les données sont fictives : les résultats n'ont aucune valeur clinique.
 
 
@@ -11,21 +20,23 @@ dir.create("results", showWarnings = FALSE)
 
 
 #Simulation de la cohorte (800 participants) 
+# La graine (set.seed) fixe le hasard : tout le monde obtient exactement les
+# mêmes participants, ce qui rend l'analyse reproductible.
 set.seed(42)
 n <- 800
-clip <- function(x, lo, hi) pmin(pmax(x, lo), hi)   
+clip <- function(x, lo, hi) pmin(pmax(x, lo), hi)   # borne les valeurs aberrantes
 
-# Données cliniques
+# Données démographiques et anthropométriques
 age   <- round(clip(rnorm(n, 62, 11), 35, 90))
 sex   <- sample(c("F", "M"), n, replace = TRUE)
 male  <- as.integer(sex == "M")
 bmi   <- round(clip(rnorm(n, 27.5 + 0.8 * male, 4.5), 17, 48), 1)
 
-# TA (augmente avec l'âge et l'IMC)
+# Pression artérielle (augmente avec l'âge et l'IMC)
 sbp   <- round(clip(rnorm(n, 115 + 0.45 * (age - 35) + 0.6 * (bmi - 27), 13), 90, 200))
 dbp   <- round(clip(sbp * 0.55 + rnorm(n, 8, 6), 55, 115))
 
-# Bilan lipidique et du diabète
+# Bilan lipidique et glycémique
 ldl   <- round(clip(rnorm(n, 125 + 0.3 * (age - 60), 32), 50, 260))
 hdl   <- round(clip(rnorm(n, 55 - 8 * male - 0.5 * (bmi - 27), 12), 22, 100))
 tg    <- round(clip(rlnorm(n, log(125) + 0.012 * (bmi - 27), 0.45), 40, 600))
@@ -42,7 +53,7 @@ crp   <- round(clip(rlnorm(n, log(1.8) + 0.03 * (bmi - 27) +
                              0.4 * (smoking_status == "current"), 0.8), 0.1, 30), 1)
 egfr  <- round(clip(rnorm(n, 98 - 0.75 * (age - 40), 14), 15, 130))
 
-# Mesures a partir d'ioT
+# Mesures de type "objet connecté" (montre, bracelet)
 activity <- round(clip(rgamma(n, 2, scale = 70) - 0.8 * (age - 60), 0, 600))
 rhr   <- round(clip(rnorm(n, 68 + 0.15 * (bmi - 27) - 0.002 * activity +
                             1.5 * (smoking_status == "current"), 8), 45, 105))
@@ -55,13 +66,15 @@ statin  <- as.integer((ldl > 130 & runif(n) < 0.35) | (diabetes == 1 & runif(n) 
 antihyp <- as.integer(sbp > 135 & runif(n) < 0.55)
 
 # Risque "vrai" d'athérosclérose : combinaison de facteurs de risque connus
+# (âge, sexe masculin, pression, LDL, diabète, tabac...) plus une part d'aléa
+# individuel, comme dans la réalité.
 lin <- -9 + 0.075 * (age - 35) + 0.55 * male + 0.012 * (sbp - 120) +
   0.010 * (ldl - 120) - 0.018 * (hdl - 50) + 0.0012 * (tg - 120) +
   0.55 * diabetes + 0.35 * (smoking_status == "current") +
   0.18 * (smoking_status == "former") + 0.012 * pack + 0.35 * fam +
   0.18 * log(crp) - 0.005 * (egfr - 90) - 0.0015 * activity -
   0.015 * (hrv - 35) + 0.012 * (bmi - 27) - 0.25 * statin + 0.05 * antihyp
-
+# [MODIFIÉ] on sépare la part "mesurable" (lin_signal) de l'aléa individuel (eps),
 # pour pouvoir calculer plus bas le plafond de performance. Même tirage aléatoire
 # qu'avant : les données générées sont strictement identiques.
 lin_signal <- lin
@@ -120,6 +133,7 @@ print(feature_table)
 
 
 # Séparation entraînement (75 %) / test (25 %) 
+# Le jeu de test est mis de côté : il ne sert qu'à évaluer le modèle final,comme une cohorte de validation. La séparation est stratifiée : la même proportion de cas se retrouve dans les deux groupes.
 y <- df$atherosclerosis
 idx_test <- unlist(lapply(split(seq_len(nrow(df)), y),
                           function(i) sample(i, size = round(length(i) * 0.25))))
@@ -132,6 +146,8 @@ print(table(is_test))      # attendu : 600 entraînement, 200 test
 
 
 # Réglage du modèle par validation croisée (5 plis) 
+# Combien d'arbres de décision empiler ? Trop peu : le modèle apprend mal.
+# Trop : il mémorise le bruit (surapprentissage). La validation croisée découpe l'entraînement en 5 parties, entraîne sur 4 et vérifie sur la 5e, à tour de rôle, et on s'arrête quand la performance cesse de s'améliorer.
 params <- list(objective = "binary:logistic", eval_metric = "logloss",
                eta = 0.05, max_depth = 3, min_child_weight = 3,
                subsample = 0.8, colsample_bytree = 0.8)
@@ -145,6 +161,7 @@ cat("Nombre d'arbres retenu :", best_nrounds, "\n")
 
 
 # Pour chaque participant, le modèle renvoie une probabilité entre 0 et 1 :
+# son risque estimé d'athérosclérose.
 model  <- xgb.train(params = params, data = dtrain, nrounds = best_nrounds, verbose = 0)
 p_all  <- predict(model, xgb.DMatrix(X))
 p_test <- p_all[is_test]
@@ -210,10 +227,14 @@ cat("AUC entraînement :", as.numeric(auc(roc(y[!is_test], p_all[!is_test],
                                              quiet = TRUE, direction = "<"))), "\n")
 
 
-  
+
+# ============================================================================
+# [AJOUT] Situer le modèle : trois références
+# ============================================================================
 
 # --- 1. Baseline : régression logistique -----------------------------------
- 
+# La régression ne gère pas les NA : on impute par la médiane, calculée sur le
+# jeu d'entraînement UNIQUEMENT puis appliquée au test (sinon, fuite d'information).
 train_idx <- which(!is_test)
 test_idx  <- which(is_test)
 med <- apply(X[train_idx, ], 2, median, na.rm = TRUE)
@@ -290,7 +311,6 @@ p_roc <- ggroc(list(XGBoost = roc_obj, `Regression logistique` = roc_glm)) +
   labs(colour = NULL) + theme_minimal()
 ggsave("results/roc_curve.png", p_roc, width = 6, height = 5, dpi = 200)
 
-
-#Courbe ROC.
-p_roc <- ggroc(roc_obj) + theme_minimal()
-ggsave("results/roc_curve.png", p_roc, width = 6, height = 5, dpi = 200)
+# [AJOUT] Versions des packages : les résultats de xgboost peuvent varier d'une
+# version à l'autre (tirages internes), il faut donc les consigner.
+writeLines(capture.output(sessionInfo()), "results/session_info.txt")

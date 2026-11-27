@@ -1,0 +1,5 @@
+"model","auc","ci_low","ci_high","brier","calib_intercept","calib_slope"
+"Plafond : vrai risque (avec aleas)",0.769,0.698,0.839,0.182,-0.13,0.89
+"Plafond : signal mesurable (sans aleas)",0.753,0.68,0.825,NA,NA,NA
+"XGBoost",0.697,0.616,0.778,0.206,-0.12,0.74
+"Regression logistique",0.747,0.673,0.821,0.193,-0.28,0.74
