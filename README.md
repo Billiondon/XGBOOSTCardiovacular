@@ -74,7 +74,6 @@ L'exactitude est proche de celle d'un modèle répondant « indemne » à tout l
 
 ## Conclusion
 
-- Ici, les données ont été créées sur ordinateur en y ajoutant exprès une part de hasard pur. Même le meilleur programme du monde ne pourrait pas dépasser 0,75 (soit environ 3 bonnes réponses sur 4). Comme il reste trop d'imprévisible, ce modèle ne suffit pas pour prendre une décision médicale pour un vrai patient.
 - XGBoost se surapprend: Avec seulement 600 dossiers pour apprendre, un outil trop complexe finit par retenir des détails inutiles .
 - Comparaison limitée: Les données sont simulées à partir d'un modèle logistique, ce que la régression logistique reproduit . Sur des données réelles, on peut penser que XGBoost aura une meilleure performance.
 - Calibration imparfaite: les deux modèles donnent des probabilités de risque extrêmes.
