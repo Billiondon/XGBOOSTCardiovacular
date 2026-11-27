@@ -1,11 +1,3 @@
-# Ce script déroule, étape par étape, la construction et l'évaluation d'un modèle de risque, comme on le ferait pour valider un score avant de l'utiliser en consultation :
-#
-#    1. simuler une cohorte de 800 participants ;
-#    2. séparer un groupe d'entraînement et un groupe de test ;
-#    3. régler le modèle par validation croisée ;
-#    4. calculer un risque individuel pour chaque participant ;
-#    5. évaluer le modèle sur des participants qu'il n'a jamais vus.
-#
 #  Les données sont fictives : les résultats n'ont aucune valeur clinique.
 
 
@@ -19,23 +11,21 @@ dir.create("results", showWarnings = FALSE)
 
 
 #Simulation de la cohorte (800 participants) 
-# La graine (set.seed) fixe le hasard : tout le monde obtient exactement les
-# mêmes participants, ce qui rend l'analyse reproductible.
 set.seed(42)
 n <- 800
-clip <- function(x, lo, hi) pmin(pmax(x, lo), hi)   # borne les valeurs aberrantes
+clip <- function(x, lo, hi) pmin(pmax(x, lo), hi)   
 
-# Données démographiques et anthropométriques
+# Données cliniques
 age   <- round(clip(rnorm(n, 62, 11), 35, 90))
 sex   <- sample(c("F", "M"), n, replace = TRUE)
 male  <- as.integer(sex == "M")
 bmi   <- round(clip(rnorm(n, 27.5 + 0.8 * male, 4.5), 17, 48), 1)
 
-# Pression artérielle (augmente avec l'âge et l'IMC)
+# TA (augmente avec l'âge et l'IMC)
 sbp   <- round(clip(rnorm(n, 115 + 0.45 * (age - 35) + 0.6 * (bmi - 27), 13), 90, 200))
 dbp   <- round(clip(sbp * 0.55 + rnorm(n, 8, 6), 55, 115))
 
-# Bilan lipidique et glycémique
+# Bilan lipidique et du diabète
 ldl   <- round(clip(rnorm(n, 125 + 0.3 * (age - 60), 32), 50, 260))
 hdl   <- round(clip(rnorm(n, 55 - 8 * male - 0.5 * (bmi - 27), 12), 22, 100))
 tg    <- round(clip(rlnorm(n, log(125) + 0.012 * (bmi - 27), 0.45), 40, 600))
@@ -52,7 +42,7 @@ crp   <- round(clip(rlnorm(n, log(1.8) + 0.03 * (bmi - 27) +
                              0.4 * (smoking_status == "current"), 0.8), 0.1, 30), 1)
 egfr  <- round(clip(rnorm(n, 98 - 0.75 * (age - 40), 14), 15, 130))
 
-# Mesures de type "objet connecté" (montre, bracelet)
+# Mesures a partir d'ioT
 activity <- round(clip(rgamma(n, 2, scale = 70) - 0.8 * (age - 60), 0, 600))
 rhr   <- round(clip(rnorm(n, 68 + 0.15 * (bmi - 27) - 0.002 * activity +
                             1.5 * (smoking_status == "current"), 8), 45, 105))
@@ -65,17 +55,21 @@ statin  <- as.integer((ldl > 130 & runif(n) < 0.35) | (diabetes == 1 & runif(n) 
 antihyp <- as.integer(sbp > 135 & runif(n) < 0.55)
 
 # Risque "vrai" d'athérosclérose : combinaison de facteurs de risque connus
-# (âge, sexe masculin, pression, LDL, diabète, tabac...) plus une part d'aléa
-# individuel, comme dans la réalité.
 lin <- -9 + 0.075 * (age - 35) + 0.55 * male + 0.012 * (sbp - 120) +
   0.010 * (ldl - 120) - 0.018 * (hdl - 50) + 0.0012 * (tg - 120) +
   0.55 * diabetes + 0.35 * (smoking_status == "current") +
   0.18 * (smoking_status == "former") + 0.012 * pack + 0.35 * fam +
   0.18 * log(crp) - 0.005 * (egfr - 90) - 0.0015 * activity -
-  0.015 * (hrv - 35) + 0.012 * (bmi - 27) - 0.25 * statin + 0.05 * antihyp +
-  rnorm(n, 0, 0.6)
+  0.015 * (hrv - 35) + 0.012 * (bmi - 27) - 0.25 * statin + 0.05 * antihyp
+
+# pour pouvoir calculer plus bas le plafond de performance. Même tirage aléatoire
+# qu'avant : les données générées sont strictement identiques.
+lin_signal <- lin
+eps        <- rnorm(n, 0, 0.6)
+lin        <- lin_signal + eps
 b <- uniroot(function(b) mean(plogis(lin + b)) - 0.35, c(-10, 10))$root  # prévalence visée ~35 %
-atherosclerosis <- rbinom(n, 1, plogis(lin + b))        # 0 = absente, 1 = présente
+p_true <- plogis(lin + b)                               # [AJOUT] vrai risque de chaque participant
+atherosclerosis <- rbinom(n, 1, p_true)                 # 0 = absente, 1 = présente
 
 # Assemblage du tableau : une ligne par participant
 df <- data.frame(
@@ -126,7 +120,6 @@ print(feature_table)
 
 
 # Séparation entraînement (75 %) / test (25 %) 
-# Le jeu de test est mis de côté : il ne sert qu'à évaluer le modèle final,comme une cohorte de validation. La séparation est stratifiée : la même proportion de cas se retrouve dans les deux groupes.
 y <- df$atherosclerosis
 idx_test <- unlist(lapply(split(seq_len(nrow(df)), y),
                           function(i) sample(i, size = round(length(i) * 0.25))))
@@ -139,8 +132,6 @@ print(table(is_test))      # attendu : 600 entraînement, 200 test
 
 
 # Réglage du modèle par validation croisée (5 plis) 
-# Combien d'arbres de décision empiler ? Trop peu : le modèle apprend mal.
-# Trop : il mémorise le bruit (surapprentissage). La validation croisée découpe l'entraînement en 5 parties, entraîne sur 4 et vérifie sur la 5e, à tour de rôle, et on s'arrête quand la performance cesse de s'améliorer.
 params <- list(objective = "binary:logistic", eval_metric = "logloss",
                eta = 0.05, max_depth = 3, min_child_weight = 3,
                subsample = 0.8, colsample_bytree = 0.8)
@@ -154,7 +145,6 @@ cat("Nombre d'arbres retenu :", best_nrounds, "\n")
 
 
 # Pour chaque participant, le modèle renvoie une probabilité entre 0 et 1 :
-# son risque estimé d'athérosclérose.
 model  <- xgb.train(params = params, data = dtrain, nrounds = best_nrounds, verbose = 0)
 p_all  <- predict(model, xgb.DMatrix(X))
 p_test <- p_all[is_test]
@@ -175,29 +165,130 @@ print(auc(roc_obj)); print(ci.auc(roc_obj))
 
 # Seuil de Youden : seuil de risque qui équilibre au mieux sensibilité et
 # spécificité. Au-dessus du seuil, on classe le participant "à risque".
-thr <- as.numeric(coords(roc_obj, "best", best.method = "youden",
+# [MODIFIÉ] Le seuil est maintenant choisi sur les prédictions "hors-pli" du jeu
+# d'entraînement (chaque participant est prédit par un modèle qui ne l'a pas vu),
+# puis appliqué tel quel au test. Le choisir sur le test lui-même rendrait la
+# sensibilité et la spécificité trop optimistes.
+set.seed(42)
+cv_oof <- xgb.cv(params = params, data = dtrain, nrounds = best_nrounds, nfold = 5,
+                 stratified = TRUE, prediction = TRUE, verbose = 0)
+# (selon la version de xgboost, les prédictions sont dans $pred ou $cv_predict$pred)
+oof_pred <- as.numeric(if (!is.null(cv_oof$pred)) cv_oof$pred else cv_oof$cv_predict$pred)
+roc_oof <- roc(y[!is_test], oof_pred, quiet = TRUE, direction = "<")
+thr <- as.numeric(coords(roc_oof, "best", best.method = "youden",
                          ret = "threshold", transpose = FALSE)$threshold[1])
-pred_class <- as.integer(p_test >= thr)
-tp <- sum(pred_class == 1 & y_test == 1)   
-tn <- sum(pred_class == 0 & y_test == 0) 
-fp <- sum(pred_class == 1 & y_test == 0)   
-fn <- sum(pred_class == 0 & y_test == 1)   
 
-print(c(seuil = thr,
-        sensibilite = tp / (tp + fn),      # part des malades repérés
-        specificite = tn / (tn + fp),      # part des sujets sains écartés
-        VPP = tp / (tp + fp),              # fiabilité d'un test positif
-        VPN = tn / (tn + fn),              # fiabilité d'un test négatif
-        exactitude = (tp + tn) / length(y_test)))
+class_metrics <- function(p, y, thr) {
+  pred <- as.integer(p >= thr)
+  tp <- sum(pred == 1 & y == 1)   # vrais positifs
+  tn <- sum(pred == 0 & y == 0)   # vrais négatifs
+  fp <- sum(pred == 1 & y == 0)   # faux positifs
+  fn <- sum(pred == 0 & y == 1)   # faux négatifs
+  c(seuil = thr,
+    sensibilite = tp / (tp + fn),      # part des malades repérés
+    specificite = tn / (tn + fp),      # part des sujets sains écartés
+    VPP = tp / (tp + fp),              # fiabilité d'un test positif
+    VPN = tn / (tn + fn),              # fiabilité d'un test négatif
+    exactitude = (tp + tn) / length(y))
+}
+print(round(class_metrics(p_test, y_test, thr), 3))
+
+# Pour comparaison : seuil de Youden choisi sur le test (version optimiste).
+thr_opt <- as.numeric(coords(roc_obj, "best", best.method = "youden",
+                             ret = "threshold", transpose = FALSE)$threshold[1])
+cat("Seuil choisi sur le test (optimiste) :\n")
+print(round(class_metrics(p_test, y_test, thr_opt), 3))
 
 # Score de Brier : écart entre risque annoncé et réalité (plus bas = mieux).
 # La référence correspond à un modèle sans information (même risque pour tous).
-cat("Brier :", mean((p_test - y_test)^2),
-    "| référence :", mean(y_test) * (1 - mean(y_test)), "\n")
+brier_ref <- mean(y_test) * (1 - mean(y_test))
+cat("Brier :", mean((p_test - y_test)^2), "| référence :", brier_ref,
+    "| gain relatif :", round(1 - mean((p_test - y_test)^2) / brier_ref, 3), "\n")
 
 # Mesure du surapprentissage : AUC sur les participants d'entraînement.
 cat("AUC entraînement :", as.numeric(auc(roc(y[!is_test], p_all[!is_test],
                                              quiet = TRUE, direction = "<"))), "\n")
+
+
+  
+
+# --- 1. Baseline : régression logistique -----------------------------------
+ 
+train_idx <- which(!is_test)
+test_idx  <- which(is_test)
+med <- apply(X[train_idx, ], 2, median, na.rm = TRUE)
+impute <- function(M) {
+  for (j in seq_len(ncol(M))) M[is.na(M[, j]), j] <- med[j]
+  M
+}
+d_tr <- data.frame(y = y[train_idx], impute(X[train_idx, ]))
+d_te <- data.frame(impute(X[test_idx, ]))
+glm_fit    <- glm(y ~ ., data = d_tr, family = binomial)
+p_glm_test <- predict(glm_fit, newdata = d_te, type = "response")
+roc_glm    <- roc(y_test, p_glm_test, quiet = TRUE, direction = "<")
+cat("AUC entraînement, régression logistique :",
+    round(as.numeric(auc(roc(y[train_idx], fitted(glm_fit), quiet = TRUE, direction = "<"))), 3), "\n")
+
+# --- 2. Calibration --------------------------------------------------------
+# Pente = 1 et intercept = 0 pour un modèle parfaitement calibré.
+# Pente < 1 : prédictions trop extrêmes (signature classique du surapprentissage).
+# Intercept < 0 : risque surestimé en moyenne ; > 0 : sous-estimé.
+calib_stats <- function(p, y) {
+  lp <- qlogis(clip(p, 1e-4, 1 - 1e-4))
+  c(intercept = coef(glm(y ~ offset(lp), family = binomial))[[1]],
+    slope     = coef(glm(y ~ lp,         family = binomial))[[2]])
+}
+
+# --- 3. Tableau comparatif -------------------------------------------------
+# Deux plafonds, calculables car on connaît le vrai mécanisme de la simulation :
+#  - le vrai risque (aléa individuel inclus) : meilleure AUC théorique, inatteignable ;
+#  - le signal mesurable (sans l'aléa) : ce qu'un modèle parfait pourrait tirer
+#    des variables observées. C'est le vrai plafond du problème.
+summarise_model <- function(name, p, calibrated = TRUE) {
+  r  <- roc(y_test, p, quiet = TRUE, direction = "<")
+  ci <- ci.auc(r)
+  cs <- if (calibrated) calib_stats(p, y_test) else c(NA, NA)
+  data.frame(model = name,
+             auc = round(as.numeric(auc(r)), 3),
+             ci_low = round(ci[1], 3), ci_high = round(ci[3], 3),
+             brier = if (calibrated) round(mean((p - y_test)^2), 3) else NA,
+             calib_intercept = round(cs[[1]], 2),
+             calib_slope     = round(cs[[2]], 2))
+}
+comparison <- rbind(
+  summarise_model("Plafond : vrai risque (avec aleas)",    p_true[is_test]),
+  summarise_model("Plafond : signal mesurable (sans aleas)", plogis(lin_signal[is_test]), calibrated = FALSE),
+  summarise_model("XGBoost",                               p_test),
+  summarise_model("Regression logistique",                 p_glm_test))
+rownames(comparison) <- NULL
+print(comparison)
+write.csv(comparison, "results/model_comparison.csv", row.names = FALSE)
+
+# Test de DeLong : la différence d'AUC entre les deux modèles est-elle réelle ?
+print(roc.test(roc_obj, roc_glm, method = "delong"))
+
+# Courbe de calibration : risque prédit (par quintile) vs fréquence observée.
+calib_bins <- function(p, y, model, k = 5) {
+  g <- cut(p, quantile(p, 0:k / k), include.lowest = TRUE)
+  data.frame(model = model, predicted = as.numeric(tapply(p, g, mean)),
+             observed = as.numeric(tapply(y, g, mean)))
+}
+cal_df <- rbind(calib_bins(p_test, y_test, "XGBoost"),
+                calib_bins(p_glm_test, y_test, "Regression logistique"))
+p_cal <- ggplot(cal_df, aes(predicted, observed, colour = model)) +
+  geom_abline(linetype = "dashed") + geom_line() + geom_point(size = 2) +
+  coord_equal(xlim = c(0, 1), ylim = c(0, 1)) +
+  labs(x = "Risque predit (moyenne par quintile)", y = "Frequence observee",
+       colour = NULL, title = "Calibration sur le jeu de test (n = 200)") +
+  theme_minimal()
+ggsave("results/calibration_curve.png", p_cal, width = 6, height = 5, dpi = 200)
+
+
+# Courbe ROC (XGBoost et régression logistique sur le jeu de test).
+p_roc <- ggroc(list(XGBoost = roc_obj, `Regression logistique` = roc_glm)) +
+  geom_abline(intercept = 1, slope = 1, linetype = "dashed", colour = "grey50") +
+  labs(colour = NULL) + theme_minimal()
+ggsave("results/roc_curve.png", p_roc, width = 6, height = 5, dpi = 200)
 
 
 #Courbe ROC.
