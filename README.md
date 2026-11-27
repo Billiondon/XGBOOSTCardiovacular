@@ -74,11 +74,11 @@ L'exactitude est proche de celle d'un modèle répondant « indemne » à tout l
 
 ## Conclusion
 
-- **Un problème difficile par construction.** Le plafond est d'environ 0,75 : l'aléa individuel simulé limite la performance de n'importe quel modèle, même parfait. Aucun modèle ne pourrait guider une décision individuelle sur ces données.
-- **XGBoost se surapprend.** Son AUC est plus basse que celle de la régression logistique (0,70 contre 0,75), et l'écart entre entraînement et test est large (0,92 contre 0,70, alors que la régression logistique passe de 0,80 à 0,75). Avec 600 participants et 22 variables, un modèle plus simple suffit.
-- **Ce résultat ne se généralise pas.** Les données sont simulées à partir d'un modèle logistique, ce que la régression logistique reproduit naturellement. Sur des données réelles, avec des non-linéarités et des interactions, XGBoost peut faire mieux.
-- **Calibration imparfaite.** Les deux modèles sont trop confiants (pente de 0,74).
-- **Métriques au seuil instables.** La sensibilité vaut 0,76 ou 0,51 selon la façon de choisir le seuil : avec 200 participants, ces valeurs sont peu précises.
+- Ici, les données ont été créées sur ordinateur en y ajoutant exprès une part de hasard pur. Même le meilleur programme du monde ne pourrait pas dépasser 0,75 (soit environ 3 bonnes réponses sur 4). Comme il reste trop d'imprévisible, ce modèle ne suffit pas pour prendre une décision médicale pour un vrai patient.
+- XGBoost se surapprend: Avec seulement 600 dossiers pour apprendre, un outil trop complexe finit par retenir des détails inutiles .
+- Comparaison limitée: Les données sont simulées à partir d'un modèle logistique, ce que la régression logistique reproduit . Sur des données réelles, on peut penser que XGBoost aura une meilleure performance.
+- Calibration imparfaite: les deux modèles donnent des probabilités de risque extrêmes.
+- Métriques au seuil instables: La sensibilité vaut 0,76 ou 0,51 selon le seuil 
 
 **Limites.** Un seul découpage entraînement/test ; 200 participants de test ; seul le nombre d'arbres est réglé ; données fictives, sans valeur clinique. Piste suivante : validation croisée répétée sur les 800 participants.
 
