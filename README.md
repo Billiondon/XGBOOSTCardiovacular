@@ -1,70 +1,103 @@
-Prédire la présence d'athérosclérose avec XGBoost:
-Ce projet construit, à partir de 800 participants fictifs, un modèle de ML (XGBoost) qui estime la probabilité d'être atteint d'athérosclérose. 
+# Prédire la présence d'athérosclérose avec XGBoost
 
-Pourquoi ce projet ?
-En consultation médicale, on cherche souvent à définir la stratégie thérapeutique selon plusieurs imperatifs dont l'évolution du patient dans le temps.
-Ajd, on estime ce risque cardiovasculaire globale par approche statistique en se basant sur les résultats d'essai clinique de gd envergure.
-On peut, par ML, estimer le risque individuel d'un patient en combinant un grand nombre de variables cliniques, biologiques et comportementales.
-Avant d'appliquer ces méthodes à de vraies base de données, il est précieux de s'entraîner sur des données simulées.
+Se basant sur les données de 800 patients fictifs, ce projet construit un modèle de prédiction XGBoost de la probabilité d'être atteint d'athérosclérose, puis réalise une comparaison à une régression logistique avec plafond de performance.
 
-La démarche suivie:
-- Creation d'une cohorte simulée
-- Mise en place d'un groupe d'entrainement et d'un groupe de test
-- Définition du meilleur modele offrant un compromis en performance et risque d'overfitting
-- Entraînement du modèle final sur les données d'apprentissage, puis calcul pour chaque participant d'une probabilité individuelle d'athérosclérose comprise entre 0 et 1
-- Evaluatuion des performances
+## Pourquoi ce projet ?
+En consultation médicale, on cherche souvent à définir la stratégie thérapeutique selon plusieurs considérations, dont son risque cardiovasculaire dans le temps. Aujourd'hui, on estime ce risque par une approche statistique, à partir des résultats d'essais cliniques de grande envergure. Par ML, on peut estimer le risque individuel d'un patient en combinant un grand nombre de variables cliniques, biologiques et comportementales. Avant d'appliquer ces méthodes à de vraies bases de données, il est précieux de s'entraîner sur des données simulées.
 
-Les données:
+## La démarche suivie
+
+1. Création d'une cohorte simulée.
+2. Séparation en un groupe d'entraînement (75 %) et un groupe de test (25 %).
+3. Choix du nombre d'arbres par validation croisée à 5 plis, pour limiter le surapprentissage (les autres hyperparamètres sont fixés à l'avance).
+4. Entraînement du modèle final sur le groupe d'entraînement, puis calcul pour chaque participant d'une probabilité individuelle d'athérosclérose comprise entre 0 et 1.
+5. Évaluation sur le groupe de test, utilisé une seule fois.
+6. Comparaison à des références : un plafond de performance (calculable car le mécanisme de simulation est connu) et une régression logistique.
+
+## Les données
+
 800 participants, une ligne par participant, 22 variables explicatives et une variable à prédire.
 
 | Famille | Variables |
 |---|---|
 | Démographie | âge, sexe |
-| Corpulence  et hémodynamique | IMC, pression artérielle systolique et diastolique |
-| EAL | LDL-cholestérol, HDL-cholestérol, triglycérides |
+| Corpulence et hémodynamique | IMC, pression artérielle systolique et diastolique |
+| Bilan lipidique (EAL) | LDL-cholestérol, HDL-cholestérol, triglycérides |
 | Métabolisme glucidique | HbA1c, diabète |
 | Mode de vie et antécédents | statut tabagique, paquets-années, antécédents familiaux cardiovasculaires |
 | Inflammation et fonction rénale | CRP ultrasensible, DFG estimé |
 | Traitements | statine, antihypertenseur |
 | Mesures de type « objet connecté » | activité physique, fréquence cardiaque de repos, variabilité sinusale (RMSSD), nombre de pas, durée de sommeil |
 
-**Variable à prédire :** `atherosclerosis` (0 = absente, 1 = présente), par exemple une plaque athéromateuse carotidienne à l'échographie.
+Variable à prédire : `atherosclerosis` (0 = absente, 1 = présente). La prévalence est de 36 % (288 cas sur 800).
 
-Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas, HDL, paquets-années), comme dans les données de vie réelle. XGBoost les gère directement.
+Quelques valeurs manquantes ont été introduites volontairement (CRP, VFC, pas, HDL, paquets-années), comme dans les données de vie réelle. XGBoost les gère directement ; pour la régression logistique, elles sont remplacées par la médiane du groupe d'entraînement.
 
-Résultats sur le jeu de test (n = 200)
+
+### XGBoost
+
+Le nombre d'arbres retenu par validation croisée est de 68.
 
 | Indicateur | Valeur | Ce que cela signifie |
 |---|---|---|
-| **AUC**  | **0,69** (IC 95 % bootstrap : 0,60 à 0,77) | Si l'on prend au hasard un sujet atteint et un sujet indemne, le modèle se trompe 3 fois sur 10. |
-| **Sensibilité** | 0,44 | Le modèle repère 44 % des sujets atteints ; 56 % passent inaperçus (faux négatifs). |
-| **Spécificité** | 0,91 | 91 % des sujets indemnes sont correctement écartés. |
-| **Valeur prédictive positive** | 0,73 | Quand le modèle prédit l'athérosclérose, il a raison 73 % du temps. |
-| **Valeur prédictive négative** | 0,74 | Quand le modèle écarte l'athérosclérose, il a raison 74 % du temps. |
-| **Exactitude** | 0,74 | Un modèle répondant « indemne » à tout le monde aurait 64 % d'exactitude (1 − prévalence) : le gain est réel mais limité. |
-| **Score de Brier** | 0,208 | Le modèle ne donne pas des probabilités absurdes, mais reste un marge à combler. |
-| **Seuil retenu** | 0,595 | Le modèle est prudent avant d'affirmer qu'un patient est atteint. |
+| AUC | 0,70 (IC 95 % DeLong : 0,62 à 0,78) | Pour un sujet atteint et un sujet indemne tirés au hasard, le modèle classe correctement la paire 7 fois sur 10. |
+| AUC (entraînement) | 0,92 | Le modèle a en partie « appris par cœur » les particularités de l’échantillon d’entraînement plutôt que des règles générales. |
+| Score de Brier | 0,206 | Référence d'un modèle sans information : 0,230. Gain relatif : 10,5 %. |
+| Pente de calibration | 0,74 |Les risques prédits sont trop extrêmes (modèle trop confiant). |
+| Intercept de calibration | −0,12 | le modèle pousse ses estimations trop près de 0 % ou de 100 %. |
 
-![Courbe ROC du jeu de test](results/roc_curve.png)
+**Classification au seuil de 0,329.** Le seuil maximise l'indice de Youden sur les prédictions « hors pli » du groupe d'entraînement (chaque participant est prédit par un modèle qui ne l'a pas vu), puis il est appliqué tel quel au test.
 
-Conclusion:
-- Discrimination limitée.Avec une AUC de 0,69, le modèle trie les participants mieux que le hasard, mais pas assez pour guider une décision individuelle.
-- Surapprentissage. L'AUC atteint **0,94 sur les participants d'entraînement** contre 0,69 sur le test. Le modèle a en partie mémorisé les particularités de l'échantillon au lieu d'apprendre des règles généralisables. 
-- Faible effectif Avec 200 participants en test, l'incertitude est large (IC 95 % de 0,60 à 0,77).
-- Une légère surestimation du risque. Le risque moyen prédit (0,38) dépasse un peu la fréquence observée (0,36). La calibration n'a toutefois pas été analysée en détail.
+| Sensibilité | Spécificité | VPP | VPN | Exactitude |
+|---|---|---|---|---|
+| 0,76 | 0,56 | 0,49 | 0,81 | 0,63 |
 
-Comment refaire la simulation?
+L'exactitude est proche de celle d'un modèle répondant « indemne » à tout le monde (0,64) : le critère de Youden équilibre sensibilité et spécificité, il ne maximise pas l'exactitude. 
+
+### Comparaison avec des références
+
+| Modèle | AUC (IC 95 %) | Brier | Pente de calibration |
+|---|---|---|---|
+| Plafond : vrai risque (aléa individuel inclus) | 0,77 (0,70 à 0,84) | 0,182 | 0,89 |
+| Plafond : signal mesurable (sans l'aléa) | 0,75 (0,68 à 0,83) | — | — |
+| Régression logistique | 0,75 (0,67 à 0,82) | 0,193 | 0,74 |
+| XGBoost | 0,70 (0,62 à 0,78) | 0,206 | 0,74 |
+
+- **Plafond « vrai risque »** : AUC obtenue en connaissant la probabilité exacte utilisée pour simuler chaque participant. Aucun modèle ne peut faire mieux.
+- **Plafond « signal mesurable »** : AUC obtenue en connaissant le mécanisme de simulation mais pas l'aléa individuel, qu'aucune variable ne mesure. C'est le meilleur résultat réaliste.
+- Les plafonds sont calculés sur les mêmes 200 participants de test : ils sont eux aussi imprécis.
+- Test de DeLong, XGBoost contre régression logistique : écart d'AUC de 0,05 (IC 95 % : −0,098 à −0,001), p = 0,044. L'écart est à la limite de la significativité.
+
+![Courbes ROC](results/roc_curve.png)
+
+![Courbe de calibration](results/calibration_curve.png)
+
+## Conclusion
+
+- **Un problème difficile par construction.** Le plafond est d'environ 0,75 : l'aléa individuel simulé limite la performance de n'importe quel modèle, même parfait. Aucun modèle ne pourrait guider une décision individuelle sur ces données.
+- **XGBoost se surapprend.** Son AUC est plus basse que celle de la régression logistique (0,70 contre 0,75), et l'écart entre entraînement et test est large (0,92 contre 0,70, alors que la régression logistique passe de 0,80 à 0,75). Avec 600 participants et 22 variables, un modèle plus simple suffit.
+- **Ce résultat ne se généralise pas.** Les données sont simulées à partir d'un modèle logistique, ce que la régression logistique reproduit naturellement. Sur des données réelles, avec des non-linéarités et des interactions, XGBoost peut faire mieux.
+- **Calibration imparfaite.** Les deux modèles sont trop confiants (pente de 0,74).
+- **Métriques au seuil instables.** La sensibilité vaut 0,76 ou 0,51 selon la façon de choisir le seuil : avec 200 participants, ces valeurs sont peu précises.
+
+**Limites.** Un seul découpage entraînement/test ; 200 participants de test ; seul le nombre d'arbres est réglé ; données fictives, sans valeur clinique. Piste suivante : validation croisée répétée sur les 800 participants.
+
+## Comment refaire la simulation ?
+
 1. Ouvrir `analysis.R` dans RStudio.
-2. Aller à Session > Set Working Directory > To Source File Location.
-3. Cliquer sur Source
+2. Aller à *Session > Set Working Directory > To Source File Location*.
+3. Cliquer sur *Source*.
 
-Le script régénère les données, entraîne le modèle et écrit les résultats dans le dossier `results/`.
+Le script régénère les données (`atherosclerosis_participants.csv`), entraîne les modèles et écrit les résultats dans le dossier `results/`.
 
-Contenu du dépôt:
+## Contenu du dépôt
 
 | Fichier | Rôle |
 |---|---|
 | `analysis.R` | Code complet, commenté, de la simulation à l'évaluation |
 | `results/predictions_per_participant.csv` | Risque prédit pour chaque participant, avec la colonne `set` (train ou test) |
-| `results/roc_curve.png` | Courbe ROC du jeu de test |
+| `results/roc_curve.png` | Courbes ROC de XGBoost et de la régression logistique sur le jeu de test |
+| `results/calibration_curve.png` | Courbe de calibration sur le jeu de test |
+| `results/model_comparison.csv` | AUC, Brier et calibration des plafonds, de la régression logistique et de XGBoost |
 | `results/feature_table.csv` | Tableau des variables (valeurs manquantes, moyenne, écart-type), créé à l'exécution du script |
+| `results/session_info.txt` | Versions de R et des packages utilisés |
